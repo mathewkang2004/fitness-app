@@ -22,7 +22,20 @@ function App() {
   const [activeWorkout, setActiveWorkout] = useState({ title: '', exercises: [] });
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [chartFilter, setChartFilter] = useState('All');
-  const [editingExerciseIndex, setEditingExerciseIndex] = useState(null);
+  const [editingExerciseIndex, setEditingExerciseIndex] = useState(null); const addExerciseToTemplate = (ex) => {
+    if (!newRoutineExercises.includes(ex)) {
+      setNewRoutineExercises([...newRoutineExercises, ex]);
+    }
+  };
+
+  const saveNewRoutine = () => {
+    if (!newRoutineTitle || newRoutineExercises.length === 0) return alert("Add a title and exercises!");
+    setRoutines([...routines, { id: Date.now(), title: newRoutineTitle, exercises: newRoutineExercises }]);
+    setIsCreating(false);
+    setNewRoutineTitle('');
+    setNewRoutineExercises([]);
+    setRoutineSearch(''); // Reset search so it's clean for next time
+  };
 
   useEffect(() => {
     localStorage.setItem('fitness_routines', JSON.stringify(routines));
@@ -91,7 +104,7 @@ function App() {
 
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', fontFamily: '-apple-system, sans-serif', width: '100%', overflowX: 'hidden' }}>
-      
+
       {/* --- ACTIVE WORKOUT OVERLAY --- */}
       {isWorkingOut && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000', zIndex: 100, overflowY: 'auto', padding: '20px', boxSizing: 'border-box' }}>
@@ -109,7 +122,7 @@ function App() {
                 <h3 style={{ color: '#007bff', margin: 0, fontSize: '1.1rem' }}>{ex.name}</h3>
                 <div style={{ display: 'flex', gap: '15px' }}>
                   <button onClick={() => setEditingExerciseIndex(exIdx)} style={{ background: 'none', border: 'none', color: '#888', fontSize: '0.85rem' }}>Edit</button>
-                  <button onClick={() => { const n = {...activeWorkout}; n.exercises.splice(exIdx,1); setActiveWorkout(n); }} style={{ background: 'none', border: 'none', color: '#ff3b30', fontSize: '0.85rem' }}>Remove</button>
+                  <button onClick={() => { const n = { ...activeWorkout }; n.exercises.splice(exIdx, 1); setActiveWorkout(n); }} style={{ background: 'none', border: 'none', color: '#ff3b30', fontSize: '0.85rem' }}>Remove</button>
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '35px 1fr 1fr 45px 45px', gap: '8px', alignItems: 'center', color: '#888', marginBottom: '10px', fontSize: '0.75rem' }}>
@@ -169,28 +182,65 @@ function App() {
               <button onClick={() => setIsCreating(true)} style={{ width: '100%', padding: '18px', backgroundColor: '#007bff', color: '#fff', borderRadius: '14px', border: 'none', fontWeight: 'bold', fontSize: '1rem' }}>+ Custom Routine</button>
               {isCreating && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000', zIndex: 110, padding: '20px', overflowY: 'auto', boxSizing: 'border-box' }}>
-                  <h2>Create Routine</h2>
-                  <input placeholder="Routine Title" value={newRoutineTitle} onChange={(e) => setNewRoutineTitle(e.target.value)} style={{ ...inputStyle, marginBottom: '20px' }} />
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
-                    {newRoutineExercises.map(ex => <span key={ex} onClick={() => setNewRoutineExercises(newRoutineExercises.filter(i => i !== ex))} style={{ backgroundColor: '#007bff', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem' }}>{ex} ✕</span>)}
+                  <div style={{ maxWidth: '500px', margin: '0 auto' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                      <h2>Create Routine</h2>
+                      <button onClick={() => setIsCreating(false)} style={{ background: 'none', border: 'none', color: '#888', fontSize: '1.5rem' }}>✕</button>
+                    </div>
+
+                    <input
+                      placeholder="Routine Title (e.g. Upper A)"
+                      value={newRoutineTitle}
+                      onChange={(e) => setNewRoutineTitle(e.target.value)}
+                      style={{ ...inputStyle, marginBottom: '20px' }}
+                    />
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
+                      {newRoutineExercises.map(ex => (
+                        <span key={ex} onClick={() => setNewRoutineExercises(newRoutineExercises.filter(i => i !== ex))} style={{ backgroundColor: '#007bff', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem' }}>
+                          {ex} ✕
+                        </span>
+                      ))}
+                    </div>
+
+                    <input
+                      placeholder="Search exercises..."
+                      value={routineSearch}
+                      onChange={(e) => setRoutineSearch(e.target.value)}
+                      style={inputStyle}
+                    />
+
+                    <div style={{ marginTop: '20px' }}>
+                      {Object.entries(EXERCISE_LIST).map(([muscle, exercises]) => {
+                        const filtered = exercises.filter(ex => ex.toLowerCase().includes(routineSearch.toLowerCase()));
+                        if (routineSearch && filtered.length === 0) return null;
+                        return (
+                          <details key={muscle} open={routineSearch.length > 0} style={{ marginBottom: '10px', backgroundColor: '#1c1c1e', borderRadius: '10px', border: '1px solid #2c2c2e' }}>
+                            <summary style={{ padding: '15px', cursor: 'pointer', fontWeight: 'bold' }}>{muscle} ({filtered.length})</summary>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '15px' }}>
+                              {filtered.map(ex => (
+                                <button
+                                  key={ex}
+                                  onClick={() => addExerciseToTemplate(ex)}
+                                  style={{
+                                    padding: '10px 14px', borderRadius: '20px',
+                                    background: newRoutineExercises.includes(ex) ? '#007bff' : '#2c2c2e',
+                                    color: '#fff', border: '1px solid #444', fontSize: '0.9rem'
+                                  }}
+                                >
+                                  {ex}
+                                </button>
+                              ))}
+                            </div>
+                          </details>
+                        );
+                      })}
+                    </div>
+
+                    <button onClick={saveNewRoutine} style={{ width: '100%', padding: '18px', backgroundColor: '#34c759', borderRadius: '14px', border: 'none', fontWeight: 'bold', marginTop: '30px', fontSize: '1rem' }}>
+                      Save Routine
+                    </button>
                   </div>
-                  <input placeholder="Search exercises..." value={routineSearch} onChange={(e) => setRoutineSearch(e.target.value)} style={inputStyle} />
-                  <div style={{ marginTop: '20px' }}>
-                    {Object.entries(EXERCISE_LIST).map(([muscle, exercises]) => {
-                      const filtered = exercises.filter(ex => ex.toLowerCase().includes(routineSearch.toLowerCase()));
-                      if (routineSearch && filtered.length === 0) return null;
-                      return (
-                        <details key={muscle} open={routineSearch.length > 0} style={{ marginBottom: '10px', backgroundColor: '#1c1c1e', borderRadius: '10px' }}>
-                          <summary style={{ padding: '15px', cursor: 'pointer' }}>{muscle}</summary>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '15px' }}>
-                            {filtered.map(ex => <button key={ex} onClick={() => { if(!newRoutineExercises.includes(ex)) setNewRoutineExercises([...newRoutineExercises, ex]) }} style={{ padding: '10px 14px', borderRadius: '20px', background: newRoutineExercises.includes(ex) ? '#007bff' : '#2c2c2e', color: '#fff', border: '1px solid #444' }}>{ex}</button>)}
-                          </div>
-                        </details>
-                      );
-                    })}
-                  </div>
-                  <button onClick={saveNewRoutine} style={{ width: '100%', padding: '18px', backgroundColor: '#34c759', borderRadius: '14px', border: 'none', fontWeight: 'bold', marginTop: '20px' }}>Save Routine</button>
-                  <button onClick={() => setIsCreating(false)} style={{ width: '100%', marginTop: '15px', color: '#888', background: 'none', border: 'none', padding: '10px' }}>Cancel</button>
                 </div>
               )}
               <h3 style={{ marginTop: '35px', color: '#888' }}>My Routines</h3>
@@ -270,7 +320,7 @@ function App() {
                           </div>
                         </div>
                       ))}
-                      <button onClick={() => { if(window.confirm("Delete?")) setHistory(history.filter((_, idx) => idx !== i)) }} style={{ marginTop: '15px', background: 'none', border: 'none', color: '#ff3b30', fontSize: '0.85rem', padding: 0 }}>Delete Log</button>
+                      <button onClick={() => { if (window.confirm("Delete?")) setHistory(history.filter((_, idx) => idx !== i)) }} style={{ marginTop: '15px', background: 'none', border: 'none', color: '#ff3b30', fontSize: '0.85rem', padding: 0 }}>Delete Log</button>
                     </div>
                   )}
                 </div>
