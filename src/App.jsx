@@ -33,6 +33,7 @@ function App() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [chartMetric, setChartMetric] = useState('Volume');
   const [chartFilter, setChartFilter] = useState('All');
+  const [chartExercise, setChartExercise] = useState('');
 
   useEffect(() => {
     localStorage.setItem('fitness_routines', JSON.stringify(routines));
@@ -295,29 +296,47 @@ function App() {
                       window.open(URL.createObjectURL(blob));
                     }} style={{ backgroundColor: '#217346', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '700' }}>Export CSV</button>
                   </div>
-                  <div style={{ backgroundColor: theme.card, padding: '24px', borderRadius: theme.radius, height: '320px', marginBottom: '20px', border: '1px solid #2c2c2e' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
-                      <select value={chartMetric} onChange={(e) => setChartMetric(e.target.value)} style={{ backgroundColor: theme.input, color: '#fff', border: 'none', borderRadius: '8px', padding: '8px', fontSize: '0.8rem', fontWeight: '700' }}>
-                        <option value="Volume">Volume Trend</option>
-                        <option value="1RM">Est. 1RM Trend</option>
-                      </select>
-                      <select value={chartFilter} onChange={(e) => setChartFilter(e.target.value)} style={{ backgroundColor: theme.input, color: '#fff', border: 'none', borderRadius: '8px', padding: '8px', fontSize: '0.8rem', fontWeight: '700' }}>
-                        <option value="All">All Routines</option>
-                        {[...new Set(history.map(h => h.title))].map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                    </div>
-                    <ResponsiveContainer width="100%" height="75%">
-                      <LineChart data={[...history].reverse().filter(h => chartFilter === 'All' || h.title === chartFilter).map(h => ({
-                        date: h.date,
-                        value: chartMetric === 'Volume' ? h.exercises.reduce((s, ex) => s + ex.sets.reduce((ss, set) => ss + (set.weight * set.reps), 0), 0) : Math.max(...h.exercises.flatMap(ex => ex.sets.map(s => Number(s.weight) * (36 / (37 - Math.min(Number(s.reps), 10))))), 0)
-                      }))}>
-                        <XAxis dataKey="date" hide />
-                        <YAxis hide />
-                        <Tooltip contentStyle={{backgroundColor: theme.card, border: '1px solid #444', borderRadius: '8px'}} />
-                        <Line type="monotone" dataKey="value" stroke={theme.accent} strokeWidth={4} dot={false} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
+                  {(() => {
+                    const filteredHistory = [...history].reverse().filter(h => chartFilter === 'All' || h.title === chartFilter);
+                    const availableExercises = [...new Set(filteredHistory.flatMap(h => h.exercises.map(ex => ex.name)))];
+                    const effectiveExercise = availableExercises.includes(chartExercise) ? chartExercise : availableExercises[0] || '';
+                    const chartData = filteredHistory.map(h => {
+                      if (chartMetric === 'Volume') {
+                        return { date: h.date, value: h.exercises.reduce((s, ex) => s + ex.sets.reduce((ss, set) => ss + (Number(set.weight) * Number(set.reps)), 0), 0) };
+                      } else {
+                        const ex = h.exercises.find(e => e.name === effectiveExercise);
+                        if (!ex) return null;
+                        return { date: h.date, value: Math.max(...ex.sets.map(s => Number(s.weight) * (36 / (37 - Math.min(Number(s.reps), 10))))) };
+                      }
+                    }).filter(Boolean);
+                    return (
+                      <div style={{ backgroundColor: theme.card, padding: '24px', borderRadius: theme.radius, height: chartMetric === '1RM' ? '360px' : '320px', marginBottom: '20px', border: '1px solid #2c2c2e' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <select value={chartMetric} onChange={(e) => setChartMetric(e.target.value)} style={{ backgroundColor: theme.input, color: '#fff', border: 'none', borderRadius: '8px', padding: '8px', fontSize: '0.8rem', fontWeight: '700' }}>
+                            <option value="Volume">Volume Trend</option>
+                            <option value="1RM">Est. 1RM Trend</option>
+                          </select>
+                          <select value={chartFilter} onChange={(e) => setChartFilter(e.target.value)} style={{ backgroundColor: theme.input, color: '#fff', border: 'none', borderRadius: '8px', padding: '8px', fontSize: '0.8rem', fontWeight: '700' }}>
+                            <option value="All">All Routines</option>
+                            {[...new Set(history.map(h => h.title))].map(t => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                        </div>
+                        {chartMetric === '1RM' && (
+                          <select value={effectiveExercise} onChange={(e) => setChartExercise(e.target.value)} style={{ backgroundColor: theme.input, color: '#fff', border: 'none', borderRadius: '8px', padding: '8px', fontSize: '0.8rem', fontWeight: '700', width: '100%', marginBottom: '8px' }}>
+                            {availableExercises.map(e => <option key={e} value={e}>{e}</option>)}
+                          </select>
+                        )}
+                        <ResponsiveContainer width="100%" height="75%">
+                          <LineChart data={chartData}>
+                            <XAxis dataKey="date" hide />
+                            <YAxis hide />
+                            <Tooltip contentStyle={{backgroundColor: theme.card, border: '1px solid #444', borderRadius: '8px'}} formatter={(v) => [`${Math.round(v)} ${chartMetric === '1RM' ? 'lbs' : ''}`, chartMetric === '1RM' ? 'Est. 1RM' : 'Volume']} />
+                            <Line type="monotone" dataKey="value" stroke={theme.accent} strokeWidth={4} dot={false} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    );
+                  })()}
                   {(() => {
                     const n = new Date(); const cy = n.getFullYear(); const cm = n.getMonth();
                     const total = cy * 12 + cm + calendarOffset;
