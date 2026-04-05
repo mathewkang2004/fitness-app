@@ -479,7 +479,7 @@ function App() {
                             acc[key].push(curr.weight);
                             return acc;
                           }, {});
-                          return Object.entries(weeks).map(([week, weights]) => ({ week: week.split(' ')[0], weight: Number((weights.reduce((a, b) => a + b, 0) / weights.length).toFixed(2)) })).reverse();
+                          return Object.entries(weeks).map(([week, weights]) => ({ week, weight: Number((weights.reduce((a, b) => a + b, 0) / weights.length).toFixed(2)) })).reverse();
                         })()}>
                           <defs><linearGradient id="cW" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={theme.success} stopOpacity={0.3}/><stop offset="95%" stopColor={theme.success} stopOpacity={0}/></linearGradient></defs>
                           <XAxis dataKey="week" stroke={theme.gray} fontSize={12} tickLine={false} axisLine={false} />
