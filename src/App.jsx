@@ -49,6 +49,7 @@ function App() {
   const [chartMetric, setChartMetric] = useState('Volume');
   const [chartFilter, setChartFilter] = useState('All');
   const [chartExercise, setChartExercise] = useState('');
+  const [selectedVolumePoint, setSelectedVolumePoint] = useState(null);
 
   useEffect(() => {
     localStorage.setItem('fitness_routines', JSON.stringify(routines));
@@ -342,7 +343,8 @@ function App() {
                     const effectiveExercise = availableExercises.includes(chartExercise) ? chartExercise : availableExercises[0] || '';
                     const chartData = filteredHistory.map(h => {
                       if (chartMetric === 'Volume') {
-                        return { date: h.date, value: h.exercises.reduce((s, ex) => s + ex.sets.reduce((ss, set) => ss + (Number(set.weight) * Number(set.reps) * (ex.name.includes('(Dumbbell)') ? 2 : 1)), 0), 0) };
+                        const breakdown = h.exercises.map(ex => ({ name: ex.name, vol: ex.sets.reduce((ss, set) => ss + (Number(set.weight) * Number(set.reps) * (ex.name.includes('(Dumbbell)') ? 2 : 1)), 0) })).filter(b => b.vol > 0).sort((a, b) => b.vol - a.vol);
+                        return { date: h.date, value: breakdown.reduce((s, b) => s + b.vol, 0), breakdown };
                       } else {
                         const ex = h.exercises.find(e => e.name === effectiveExercise);
                         if (!ex) return null;
@@ -352,11 +354,11 @@ function App() {
                     return (
                       <div style={{ ...cardStyle, padding: '20px', height: chartMetric === '1RM' ? '360px' : '320px', marginBottom: '20px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', gap: '8px' }}>
-                          <select value={chartMetric} onChange={(e) => setChartMetric(e.target.value)} style={{ backgroundColor: theme.input, color: '#fff', border: `1px solid ${theme.border}`, borderRadius: '10px', padding: '8px 12px', fontSize: '0.78rem', fontWeight: '700', flex: 1 }}>
+                          <select value={chartMetric} onChange={(e) => { setChartMetric(e.target.value); setSelectedVolumePoint(null); }} style={{ backgroundColor: theme.input, color: '#fff', border: `1px solid ${theme.border}`, borderRadius: '10px', padding: '8px 12px', fontSize: '0.78rem', fontWeight: '700', flex: 1 }}>
                             <option value="Volume">Volume Trend</option>
                             <option value="1RM">Est. 1RM Trend</option>
                           </select>
-                          <select value={chartFilter} onChange={(e) => setChartFilter(e.target.value)} style={{ backgroundColor: theme.input, color: '#fff', border: `1px solid ${theme.border}`, borderRadius: '10px', padding: '8px 12px', fontSize: '0.78rem', fontWeight: '700', flex: 1 }}>
+                          <select value={chartFilter} onChange={(e) => { setChartFilter(e.target.value); setSelectedVolumePoint(null); }} style={{ backgroundColor: theme.input, color: '#fff', border: `1px solid ${theme.border}`, borderRadius: '10px', padding: '8px 12px', fontSize: '0.78rem', fontWeight: '700', flex: 1 }}>
                             <option value="All">All Routines</option>
                             {[...new Set(history.map(h => h.title))].map(t => <option key={t} value={t}>{t}</option>)}
                           </select>
@@ -367,7 +369,7 @@ function App() {
                           </select>
                         )}
                         <ResponsiveContainer width="100%" height="75%">
-                          <LineChart data={chartData}>
+                          <LineChart data={chartData} onClick={(d) => { if (chartMetric === 'Volume' && d && d.activePayload) setSelectedVolumePoint(d.activePayload[0].payload); }} style={{ cursor: chartMetric === 'Volume' ? 'pointer' : 'default' }}>
                             <defs>
                               <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
                                 <stop offset="0%" stopColor="#0a84ff" />
@@ -377,12 +379,30 @@ function App() {
                             <XAxis dataKey="date" hide />
                             <YAxis hide />
                             <Tooltip contentStyle={{ backgroundColor: theme.card, border: `1px solid ${theme.border}`, borderRadius: '10px', fontSize: '0.8rem' }} formatter={(v) => [`${Math.round(v)} ${chartMetric === '1RM' ? 'lbs' : ''}`, chartMetric === '1RM' ? 'Est. 1RM' : 'Volume']} />
-                            <Line type="monotone" dataKey="value" stroke="url(#lineGrad)" strokeWidth={3} dot={false} />
+                            <Line type="monotone" dataKey="value" stroke="url(#lineGrad)" strokeWidth={3} dot={chartMetric === 'Volume' ? { r: 3, fill: theme.accent, strokeWidth: 0 } : false} activeDot={{ r: 5 }} />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
                     );
                   })()}
+                  {selectedVolumePoint && chartMetric === 'Volume' && (
+                    <div style={{ ...cardStyle, padding: '18px 20px', marginBottom: '20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <span style={{ fontWeight: '800', fontSize: '0.9rem' }}>{selectedVolumePoint.date}</span>
+                        <button onClick={() => setSelectedVolumePoint(null)} style={{ background: 'none', border: 'none', color: theme.gray, fontSize: '1.1rem', cursor: 'pointer', lineHeight: 1 }}>✕</button>
+                      </div>
+                      {selectedVolumePoint.breakdown.map((b, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: i < selectedVolumePoint.breakdown.length - 1 ? `1px solid ${theme.border}` : 'none' }}>
+                          <span style={{ fontSize: '0.85rem', color: theme.grayLight }}>{b.name}</span>
+                          <span style={{ fontWeight: '700', fontSize: '0.85rem' }}>{Math.round(b.vol)} lbs</span>
+                        </div>
+                      ))}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', marginTop: '4px', borderTop: `1px solid ${theme.border}` }}>
+                        <span style={{ fontWeight: '800', fontSize: '0.85rem' }}>Total</span>
+                        <span style={{ fontWeight: '800', fontSize: '0.85rem', color: theme.accent }}>{Math.round(selectedVolumePoint.value)} lbs</span>
+                      </div>
+                    </div>
+                  )}
                   {(() => {
                     const n = new Date(); const cy = n.getFullYear(); const cm = n.getMonth();
                     const total = cy * 12 + cm + calendarOffset;
