@@ -27,6 +27,8 @@ function App() {
   const [newRoutineExercises, setNewRoutineExercises] = useState([]);
   const [todayWeight, setTodayWeight] = useState('');
   const [expandedIndex, setExpandedIndex] = useState(null);
+  const [showAllActivity, setShowAllActivity] = useState(false);
+  const [calendarOffset, setCalendarOffset] = useState(0);
   const [editingExerciseIndex, setEditingExerciseIndex] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [chartMetric, setChartMetric] = useState('Volume');
@@ -316,23 +318,32 @@ function App() {
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                  <div style={{ backgroundColor: theme.card, padding: '24px', borderRadius: theme.radius, marginBottom: '24px', border: '1px solid #2c2c2e' }}>
-                    <div style={{ textAlign: 'center', marginBottom: '20px', fontWeight: '800', fontSize: '1.1rem' }}>{new Date().toLocaleString('default', { month: 'long' })}</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '10px', textAlign: 'center' }}>
-                      {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => <div key={d} style={{ color: theme.accent, fontWeight: '800', fontSize: '0.75rem' }}>{d}</div>)}
-                      {(() => {
-                        const n = new Date(); const y = n.getFullYear(); const m = n.getMonth();
-                        const f = new Date(y, m, 1).getDay(); const dM = new Date(y, m + 1, 0).getDate();
-                        const days = [];
-                        for (let i = 0; i < f; i++) days.push(<div key={`e-${i}`} />);
-                        for (let d = 1; d <= dM; d++) {
-                          const ds = `${m + 1}/${d}/${y}`; const has = history.some(h => h.date === ds);
-                          days.push(<div key={d} onClick={() => setSelectedDate(has ? ds : null)} style={{ height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', backgroundColor: has ? theme.accent : 'transparent', color: has ? '#fff' : theme.gray, fontSize: '0.9rem', cursor: has ? 'pointer' : 'default' }}>{d}</div>);
-                        }
-                        return days;
-                      })()}
-                    </div>
-                  </div>
+                  {(() => {
+                    const n = new Date(); const cy = n.getFullYear(); const cm = n.getMonth();
+                    const total = cy * 12 + cm + calendarOffset;
+                    const y = Math.floor(total / 12); const m = total % 12;
+                    const label = new Date(y, m, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+                    const f = new Date(y, m, 1).getDay(); const dM = new Date(y, m + 1, 0).getDate();
+                    const days = [];
+                    for (let i = 0; i < f; i++) days.push(<div key={`e-${i}`} />);
+                    for (let d = 1; d <= dM; d++) {
+                      const ds = `${m + 1}/${d}/${y}`; const has = history.some(h => h.date === ds);
+                      days.push(<div key={d} onClick={() => setSelectedDate(has ? ds : null)} style={{ height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', backgroundColor: has ? theme.accent : 'transparent', color: has ? '#fff' : theme.gray, fontSize: '0.9rem', cursor: has ? 'pointer' : 'default' }}>{d}</div>);
+                    }
+                    return (
+                      <div style={{ backgroundColor: theme.card, padding: '24px', borderRadius: theme.radius, marginBottom: '24px', border: '1px solid #2c2c2e' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                          <button onClick={() => setCalendarOffset(o => o - 1)} style={{ background: 'none', border: 'none', color: theme.accent, fontSize: '1.2rem', fontWeight: '800', cursor: 'pointer' }}>‹</button>
+                          <span style={{ fontWeight: '800', fontSize: '1.1rem' }}>{label}</span>
+                          <button onClick={() => setCalendarOffset(o => o + 1)} disabled={calendarOffset >= 0} style={{ background: 'none', border: 'none', color: calendarOffset >= 0 ? theme.gray : theme.accent, fontSize: '1.2rem', fontWeight: '800', cursor: calendarOffset >= 0 ? 'default' : 'pointer' }}>›</button>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '10px', textAlign: 'center' }}>
+                          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => <div key={d} style={{ color: theme.accent, fontWeight: '800', fontSize: '0.75rem' }}>{d}</div>)}
+                          {days}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   {selectedDate && (
                     <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: theme.card, borderRadius: theme.radius, border: `1px solid ${theme.accent}` }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}><strong>{selectedDate}</strong><button onClick={() => setSelectedDate(null)} style={{background:'none', border:'none', color:theme.gray}}>✕</button></div>
@@ -346,9 +357,9 @@ function App() {
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '40px', marginBottom: '20px' }}>
                     <h3 style={{ margin: 0, fontWeight: '800' }}>Recent Activity</h3>
-                    <button onClick={() => setExpandedIndex(expandedIndex === 'all' ? null : 'all')} style={{ color: theme.accent, fontSize: '0.9rem', background:'none', border:'none', fontWeight: '700' }}>{expandedIndex === 'all' ? 'Show Less' : 'View All'}</button>
+                    <button onClick={() => setShowAllActivity(v => !v)} style={{ color: theme.accent, fontSize: '0.9rem', background:'none', border:'none', fontWeight: '700' }}>{showAllActivity ? 'Show Less' : 'View All'}</button>
                   </div>
-                  {(expandedIndex === 'all' ? history : history.slice(0, 5)).map((h, i) => (
+                  {(showAllActivity ? history : history.slice(0, 5)).map((h, i) => (
                     <div key={i} style={{ backgroundColor: theme.card, borderRadius: theme.radius, marginBottom: '12px', padding: '20px', borderLeft: `6px solid ${theme.accent}`, borderTop: '1px solid #2c2c2e', borderRight: '1px solid #2c2c2e', borderBottom: '1px solid #2c2c2e' }}>
                       <div onClick={() => setExpandedIndex(expandedIndex === i ? null : i)} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}>
                         <div><strong style={{fontSize: '1.1rem'}}>{h.title}</strong><div style={{ color: theme.gray, fontSize: '0.8rem', marginTop: '4px' }}>{h.date}</div></div>
