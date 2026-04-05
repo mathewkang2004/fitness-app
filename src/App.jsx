@@ -342,7 +342,7 @@ function App() {
                     const effectiveExercise = availableExercises.includes(chartExercise) ? chartExercise : availableExercises[0] || '';
                     const chartData = filteredHistory.map(h => {
                       if (chartMetric === 'Volume') {
-                        return { date: h.date, value: h.exercises.reduce((s, ex) => s + ex.sets.reduce((ss, set) => ss + (Number(set.weight) * Number(set.reps)), 0), 0) };
+                        return { date: h.date, value: h.exercises.reduce((s, ex) => s + ex.sets.reduce((ss, set) => ss + (Number(set.weight) * Number(set.reps) * (ex.name.includes('(Dumbbell)') ? 2 : 1)), 0), 0) };
                       } else {
                         const ex = h.exercises.find(e => e.name === effectiveExercise);
                         if (!ex) return null;
