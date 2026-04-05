@@ -75,7 +75,10 @@ function App() {
     const lastSession = history.find(h => h.title === routineTitle);
     if (!lastSession) return null;
     const lastEx = lastSession.exercises.find(ex => ex.name === exerciseName);
-    return lastEx ? Math.max(...lastEx.sets.map(s => Number(s.weight))) : null;
+    if (!lastEx) return null;
+    const maxWeight = Math.max(...lastEx.sets.map(s => Number(s.weight)));
+    const maxReps = Math.max(...lastEx.sets.filter(s => Number(s.weight) === maxWeight).map(s => Number(s.reps)));
+    return { weight: maxWeight, reps: maxReps };
   };
 
   const getPlates = (lbs, name) => {
@@ -183,7 +186,7 @@ function App() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
                     <div>
                       <h3 style={{ color: theme.accent, margin: 0, fontSize: '1rem', fontWeight: '800' }}>{ex.name}</h3>
-                      {lastMax && <span style={{ fontSize: '0.7rem', color: theme.gray }}>Last Max: {lastMax} lbs</span>}
+                      {lastMax && <span style={{ fontSize: '0.7rem', color: theme.gray }}>Last Max: {lastMax.weight} lbs x {lastMax.reps}</span>}
                     </div>
                     <div style={{ display: 'flex', gap: '15px' }}>
                       <button onClick={() => moveActiveExercise(exIdx, -1)} style={{ background: 'none', border: 'none', color: theme.gray, fontSize: '0.9rem' }}>▲</button>
@@ -193,8 +196,8 @@ function App() {
                     </div>
                   </div>
                   {ex.sets.map((set, sIdx) => {
-                    const isUp = lastMax && Number(set.weight) > lastMax;
-                    const isDown = lastMax && Number(set.weight) < lastMax;
+                    const isUp = lastMax && Number(set.weight) > lastMax.weight;
+                    const isDown = lastMax && Number(set.weight) < lastMax.weight;
                     const plateMath = getPlates(set.weight, ex.name);
                     return (
                       <div key={sIdx} style={{ marginBottom: '12px', opacity: set.completed ? 0.4 : 1 }}>
