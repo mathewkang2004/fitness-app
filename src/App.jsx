@@ -45,6 +45,8 @@ function App() {
   const [showAllActivity, setShowAllActivity] = useState(false);
   const [calendarOffset, setCalendarOffset] = useState(0);
   const [editingExerciseIndex, setEditingExerciseIndex] = useState(null);
+  const [isAddingExercise, setIsAddingExercise] = useState(false);
+  const [removedExercise, setRemovedExercise] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [chartMetric, setChartMetric] = useState('Volume');
   const [chartFilter, setChartFilter] = useState('All');
@@ -58,6 +60,12 @@ function App() {
     localStorage.setItem('fitness_active_status', JSON.stringify(isWorkingOut));
     localStorage.setItem('fitness_active_workout', JSON.stringify(activeWorkout));
   }, [routines, history, weightHistory, isWorkingOut, activeWorkout]);
+
+  useEffect(() => {
+    if (!removedExercise) return;
+    const t = setTimeout(() => setRemovedExercise(null), 5000);
+    return () => clearTimeout(t);
+  }, [removedExercise]);
 
   // --- UTILITIES ---
   const handleImport = (e) => {
@@ -214,7 +222,7 @@ function App() {
                         <button onClick={() => moveActiveExercise(exIdx, -1)} style={{ background: 'none', border: 'none', color: theme.gray, fontSize: '0.9rem', padding: '4px' }}>▲</button>
                         <button onClick={() => moveActiveExercise(exIdx, 1)} style={{ background: 'none', border: 'none', color: theme.gray, fontSize: '0.9rem', padding: '4px' }}>▼</button>
                         <button onClick={() => setEditingExerciseIndex(exIdx)} style={{ background: 'none', border: 'none', color: theme.grayLight, fontSize: '0.8rem', fontWeight: '700' }}>Swap</button>
-                        <button onClick={() => { const n = {...activeWorkout}; n.exercises.splice(exIdx,1); setActiveWorkout(n); }} style={{ background: 'none', border: 'none', color: theme.danger, fontSize: '0.8rem', fontWeight: '700' }}>Remove</button>
+                        <button onClick={() => { const n = {...activeWorkout}; const [removed] = n.exercises.splice(exIdx, 1); setRemovedExercise({ exercise: removed, index: exIdx }); setActiveWorkout(n); }} style={{ background: 'none', border: 'none', color: theme.danger, fontSize: '0.8rem', fontWeight: '700' }}>Remove</button>
                       </div>
                     </div>
                   </div>
@@ -245,18 +253,45 @@ function App() {
               );
             })}
 
+            <motion.button whileTap={buttonTap} onClick={() => setIsAddingExercise(true)} style={{ width: '100%', padding: '13px', backgroundColor: 'transparent', color: theme.grayLight, borderRadius: theme.radiusSm, border: `1px dashed ${theme.border}`, fontSize: '0.85rem', fontWeight: '700', marginBottom: '20px', cursor: 'pointer' }}>+ Add Exercise</motion.button>
+
+            {removedExercise && (
+              <div style={{ position: 'fixed', bottom: '90px', left: '20px', right: '20px', backgroundColor: theme.card, border: `1px solid ${theme.border}`, borderRadius: '12px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 200, boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}>
+                <span style={{ fontSize: '0.85rem', color: theme.grayLight }}>Removed <span style={{ color: '#fff', fontWeight: '700' }}>{removedExercise.exercise.name}</span></span>
+                <button onClick={() => { const n = {...activeWorkout}; n.exercises.splice(removedExercise.index, 0, removedExercise.exercise); setActiveWorkout(n); setRemovedExercise(null); }} style={{ background: 'none', border: 'none', color: theme.accent, fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer' }}>Undo</button>
+              </div>
+            )}
+
             {editingExerciseIndex !== null && (
               <div style={{ position: 'fixed', inset: 0, backgroundColor: theme.bg, zIndex: 120, padding: '20px', overflowY: 'auto' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                   <h3 style={{ margin: 0, fontWeight: '800' }}>Swap Exercise</h3>
-                  <button onClick={() => setEditingExerciseIndex(null)} style={{ color: theme.grayLight, background: 'none', border: 'none', fontSize: '1.5rem', lineHeight: 1 }}>✕</button>
+                  <button onClick={() => { setEditingExerciseIndex(null); setRoutineSearch(''); }} style={{ color: theme.grayLight, background: 'none', border: 'none', fontSize: '1.5rem', lineHeight: 1 }}>✕</button>
                 </div>
                 <input placeholder="Search exercises..." value={routineSearch} onChange={(e) => setRoutineSearch(e.target.value)} style={{ ...inputStyle, marginBottom: '12px' }} />
                 {Object.entries(EXERCISE_LIST).map(([m, exs]) => (
                   <details key={m} open={routineSearch.length > 0} style={{ ...cardStyle, marginTop: '10px', overflow: 'hidden' }}>
                     <summary style={{ padding: '14px 18px', fontWeight: '700', cursor: 'pointer', fontSize: '0.95rem' }}>{m}</summary>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '14px 18px 18px', borderTop: `1px solid ${theme.border}` }}>
-                      {exs.filter(e => e.toLowerCase().includes(routineSearch.toLowerCase())).map(e => <button key={e} onClick={() => { const n = {...activeWorkout}; n.exercises[editingExerciseIndex].name = e; setActiveWorkout(n); setEditingExerciseIndex(null); }} style={{ padding: '8px 14px', borderRadius: '20px', background: theme.input, color: '#fff', border: `1px solid ${theme.border}`, fontSize: '0.85rem', cursor: 'pointer' }}>{e}</button>)}
+                      {exs.filter(e => e.toLowerCase().includes(routineSearch.toLowerCase())).map(e => <button key={e} onClick={() => { const n = {...activeWorkout}; n.exercises[editingExerciseIndex].name = e; setActiveWorkout(n); setEditingExerciseIndex(null); setRoutineSearch(''); }} style={{ padding: '8px 14px', borderRadius: '20px', background: theme.input, color: '#fff', border: `1px solid ${theme.border}`, fontSize: '0.85rem', cursor: 'pointer' }}>{e}</button>)}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            )}
+
+            {isAddingExercise && (
+              <div style={{ position: 'fixed', inset: 0, backgroundColor: theme.bg, zIndex: 120, padding: '20px', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h3 style={{ margin: 0, fontWeight: '800' }}>Add Exercise</h3>
+                  <button onClick={() => { setIsAddingExercise(false); setRoutineSearch(''); }} style={{ color: theme.grayLight, background: 'none', border: 'none', fontSize: '1.5rem', lineHeight: 1 }}>✕</button>
+                </div>
+                <input placeholder="Search exercises..." value={routineSearch} onChange={(e) => setRoutineSearch(e.target.value)} style={{ ...inputStyle, marginBottom: '12px' }} />
+                {Object.entries(EXERCISE_LIST).map(([m, exs]) => (
+                  <details key={m} open={routineSearch.length > 0} style={{ ...cardStyle, marginTop: '10px', overflow: 'hidden' }}>
+                    <summary style={{ padding: '14px 18px', fontWeight: '700', cursor: 'pointer', fontSize: '0.95rem' }}>{m}</summary>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '14px 18px 18px', borderTop: `1px solid ${theme.border}` }}>
+                      {exs.filter(e => e.toLowerCase().includes(routineSearch.toLowerCase())).map(e => <button key={e} onClick={() => { const n = {...activeWorkout}; n.exercises.push({ name: e, sets: [{ weight: '', reps: '', completed: false }] }); setActiveWorkout(n); setIsAddingExercise(false); setRoutineSearch(''); }} style={{ padding: '8px 14px', borderRadius: '20px', background: theme.input, color: '#fff', border: `1px solid ${theme.border}`, fontSize: '0.85rem', cursor: 'pointer' }}>{e}</button>)}
                     </div>
                   </details>
                 ))}
