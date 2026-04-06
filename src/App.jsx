@@ -368,7 +368,7 @@ function App() {
                             {availableExercises.map(e => <option key={e} value={e}>{e}</option>)}
                           </select>
                         )}
-                        <div onClick={() => { if (chartMetric === 'Volume' && chartFilter !== 'All') setSelectedVolumePoint({ isComparison: true }); }} style={{ width: '100%', height: '75%', cursor: chartFilter !== 'All' && chartMetric === 'Volume' ? 'pointer' : 'default' }}>
+                        <div onClick={(e) => { if (chartMetric !== 'Volume' || chartFilter === 'All') return; const rect = e.currentTarget.getBoundingClientRect(); const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)); const idx = Math.round(ratio * (chartData.length - 1)); setSelectedVolumePoint({ isComparison: true, clickedDate: chartData[idx]?.date }); }} style={{ width: '100%', height: '75%', cursor: chartFilter !== 'All' && chartMetric === 'Volume' ? 'pointer' : 'default' }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={chartData} onClick={(d) => { if (chartMetric === 'Volume' && chartFilter === 'All' && d && d.activePayload) setSelectedVolumePoint(d.activePayload[0].payload); }} style={{ cursor: 'inherit' }}>
                             <defs>
@@ -390,7 +390,9 @@ function App() {
                   {selectedVolumePoint && chartMetric === 'Volume' && (() => {
                     if (selectedVolumePoint.isComparison) {
                       const fl = [...history].reverse().filter(h => h.title === chartFilter);
-                      const recent = fl[0], prev = fl[1];
+                      const clickedIdx = selectedVolumePoint.clickedDate ? fl.findIndex(h => h.date === selectedVolumePoint.clickedDate) : fl.length - 1;
+                      const recentIdx = clickedIdx >= 0 ? clickedIdx : fl.length - 1;
+                      const recent = fl[recentIdx], prev = fl[recentIdx - 1];
                       if (!recent || !prev) return null;
                       const getBest = (ex) => ex.sets.reduce((b, s) => { const w = Number(s.weight), r = Number(s.reps); return (w > b.w || (w === b.w && r > b.r)) ? { w, r } : b; }, { w: 0, r: 0 });
                       const allNames = [...new Set([...recent.exercises.map(e => e.name), ...prev.exercises.map(e => e.name)])];
