@@ -395,6 +395,8 @@ function App() {
                       const recent = fl[recentIdx], prev = fl[recentIdx - 1];
                       if (!recent || !prev) return null;
                       const getBest = (ex) => ex.sets.reduce((b, s) => { const w = Number(s.weight), r = Number(s.reps); return (w > b.w || (w === b.w && r > b.r)) ? { w, r } : b; }, { w: 0, r: 0 });
+                      const getVol = (ex) => ex.sets.reduce((s, set) => s + Number(set.weight) * Number(set.reps) * (ex.name.includes('(Dumbbell)') ? 2 : 1), 0);
+                      const arrowFor = (a, b) => a > b ? { sym: '↑', col: '#30d158' } : a < b ? { sym: '↓', col: '#ff453a' } : { sym: '→', col: theme.gray };
                       const allNames = [...new Set([...recent.exercises.map(e => e.name), ...prev.exercises.map(e => e.name)])];
                       return (
                         <div style={{ ...cardStyle, padding: '18px 20px', marginBottom: '20px' }}>
@@ -402,7 +404,7 @@ function App() {
                             <span style={{ fontWeight: '800', fontSize: '0.9rem' }}>Workout Comparison</span>
                             <button onClick={() => setSelectedVolumePoint(null)} style={{ background: 'none', border: 'none', color: theme.gray, fontSize: '1.1rem', cursor: 'pointer', lineHeight: 1 }}>✕</button>
                           </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 32px 1fr', textAlign: 'center', marginBottom: '8px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', textAlign: 'center', marginBottom: '8px' }}>
                             <span style={{ fontSize: '0.72rem', color: theme.gray }}>{prev.date}</span>
                             <span />
                             <span style={{ fontSize: '0.72rem', color: theme.gray }}>{recent.date}</span>
@@ -412,18 +414,30 @@ function App() {
                             const prevEx = prev.exercises.find(e => e.name === name);
                             const rb = recentEx ? getBest(recentEx) : null;
                             const pb = prevEx ? getBest(prevEx) : null;
-                            let arrow = '→', arrowColor = theme.gray;
-                            if (rb && pb) {
-                              if (rb.w > pb.w || (rb.w === pb.w && rb.r > pb.r)) { arrow = '↑'; arrowColor = '#30d158'; }
-                              else if (rb.w < pb.w || (rb.w === pb.w && rb.r < pb.r)) { arrow = '↓'; arrowColor = '#ff453a'; }
-                            } else if (rb && !pb) { arrow = 'NEW'; arrowColor = '#0a84ff'; }
-                            else if (!rb && pb) { arrow = '—'; arrowColor = theme.gray; }
+                            const rv = recentEx ? getVol(recentEx) : null;
+                            const pv = prevEx ? getVol(prevEx) : null;
+                            const both = rb && pb;
+                            const wA = both ? arrowFor(rb.w, pb.w) : null;
+                            const rA = both ? arrowFor(rb.r, pb.r) : null;
+                            const vA = rv != null && pv != null ? arrowFor(rv, pv) : null;
                             return (
                               <div key={i} style={{ padding: '8px 0', borderBottom: i < allNames.length - 1 ? `1px solid ${theme.border}` : 'none' }}>
                                 <div style={{ fontSize: '0.72rem', color: theme.grayLight, marginBottom: '4px', textAlign: 'center' }}>{name}</div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 32px 1fr', alignItems: 'center', textAlign: 'center' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', textAlign: 'center', gap: '4px' }}>
                                   <span style={{ fontSize: '0.82rem', color: pb ? '#fff' : theme.gray }}>{pb ? `${pb.w} × ${pb.r}` : '—'}</span>
-                                  <span style={{ fontWeight: '800', fontSize: '0.88rem', color: arrowColor }}>{arrow}</span>
+                                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', padding: '0 4px' }}>
+                                    {both ? (
+                                      <>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: '700', color: wA.col }}>W{wA.sym}</span>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: '700', color: rA.col }}>R{rA.sym}</span>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: '700', color: vA.col }}>V{vA.sym}</span>
+                                      </>
+                                    ) : rb && !pb ? (
+                                      <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#0a84ff' }}>NEW</span>
+                                    ) : (
+                                      <span style={{ fontSize: '0.7rem', color: theme.gray }}>—</span>
+                                    )}
+                                  </div>
                                   <span style={{ fontSize: '0.82rem', color: rb ? '#fff' : theme.gray }}>{rb ? `${rb.w} × ${rb.r}` : '—'}</span>
                                 </div>
                               </div>
