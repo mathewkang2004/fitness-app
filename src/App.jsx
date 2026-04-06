@@ -369,7 +369,7 @@ function App() {
                           </select>
                         )}
                         <ResponsiveContainer width="100%" height="75%">
-                          <LineChart data={chartData} onClick={(d) => { if (chartMetric === 'Volume' && d && d.activePayload) setSelectedVolumePoint(d.activePayload[0].payload); }} style={{ cursor: chartMetric === 'Volume' ? 'pointer' : 'default' }}>
+                          <LineChart data={chartData} onClick={(d) => { if (chartMetric === 'Volume' && d && d.activePayload) { if (chartFilter === 'All') { setSelectedVolumePoint(d.activePayload[0].payload); } else { setSelectedVolumePoint({ isComparison: true }); } } }} style={{ cursor: chartMetric === 'Volume' ? 'pointer' : 'default' }}>
                             <defs>
                               <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
                                 <stop offset="0%" stopColor="#0a84ff" />
@@ -385,24 +385,68 @@ function App() {
                       </div>
                     );
                   })()}
-                  {selectedVolumePoint && chartMetric === 'Volume' && (
-                    <div style={{ ...cardStyle, padding: '18px 20px', marginBottom: '20px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                        <span style={{ fontWeight: '800', fontSize: '0.9rem' }}>{selectedVolumePoint.date}</span>
-                        <button onClick={() => setSelectedVolumePoint(null)} style={{ background: 'none', border: 'none', color: theme.gray, fontSize: '1.1rem', cursor: 'pointer', lineHeight: 1 }}>✕</button>
-                      </div>
-                      {selectedVolumePoint.breakdown.map((b, i) => (
-                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: i < selectedVolumePoint.breakdown.length - 1 ? `1px solid ${theme.border}` : 'none' }}>
-                          <span style={{ fontSize: '0.85rem', color: theme.grayLight }}>{b.name}</span>
-                          <span style={{ fontWeight: '700', fontSize: '0.85rem' }}>{Math.round(b.vol)} lbs</span>
+                  {selectedVolumePoint && chartMetric === 'Volume' && (() => {
+                    if (selectedVolumePoint.isComparison) {
+                      const fl = [...history].reverse().filter(h => h.title === chartFilter);
+                      const recent = fl[0], prev = fl[1];
+                      if (!recent || !prev) return null;
+                      const getBest = (ex) => ex.sets.reduce((b, s) => { const w = Number(s.weight), r = Number(s.reps); return (w > b.w || (w === b.w && r > b.r)) ? { w, r } : b; }, { w: 0, r: 0 });
+                      const allNames = [...new Set([...recent.exercises.map(e => e.name), ...prev.exercises.map(e => e.name)])];
+                      return (
+                        <div style={{ ...cardStyle, padding: '18px 20px', marginBottom: '20px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <span style={{ fontWeight: '800', fontSize: '0.9rem' }}>Workout Comparison</span>
+                            <button onClick={() => setSelectedVolumePoint(null)} style={{ background: 'none', border: 'none', color: theme.gray, fontSize: '1.1rem', cursor: 'pointer', lineHeight: 1 }}>✕</button>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 32px 1fr', textAlign: 'center', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '0.72rem', color: theme.gray }}>{prev.date}</span>
+                            <span />
+                            <span style={{ fontSize: '0.72rem', color: theme.gray }}>{recent.date}</span>
+                          </div>
+                          {allNames.map((name, i) => {
+                            const recentEx = recent.exercises.find(e => e.name === name);
+                            const prevEx = prev.exercises.find(e => e.name === name);
+                            const rb = recentEx ? getBest(recentEx) : null;
+                            const pb = prevEx ? getBest(prevEx) : null;
+                            let arrow = '→', arrowColor = theme.gray;
+                            if (rb && pb) {
+                              if (rb.w > pb.w || (rb.w === pb.w && rb.r > pb.r)) { arrow = '↑'; arrowColor = '#30d158'; }
+                              else if (rb.w < pb.w || (rb.w === pb.w && rb.r < pb.r)) { arrow = '↓'; arrowColor = '#ff453a'; }
+                            } else if (rb && !pb) { arrow = 'NEW'; arrowColor = '#0a84ff'; }
+                            else if (!rb && pb) { arrow = '—'; arrowColor = theme.gray; }
+                            return (
+                              <div key={i} style={{ padding: '8px 0', borderBottom: i < allNames.length - 1 ? `1px solid ${theme.border}` : 'none' }}>
+                                <div style={{ fontSize: '0.72rem', color: theme.grayLight, marginBottom: '4px', textAlign: 'center' }}>{name}</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 32px 1fr', alignItems: 'center', textAlign: 'center' }}>
+                                  <span style={{ fontSize: '0.82rem', color: pb ? '#fff' : theme.gray }}>{pb ? `${pb.w} × ${pb.r}` : '—'}</span>
+                                  <span style={{ fontWeight: '800', fontSize: '0.88rem', color: arrowColor }}>{arrow}</span>
+                                  <span style={{ fontSize: '0.82rem', color: rb ? '#fff' : theme.gray }}>{rb ? `${rb.w} × ${rb.r}` : '—'}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      ))}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', marginTop: '4px', borderTop: `1px solid ${theme.border}` }}>
-                        <span style={{ fontWeight: '800', fontSize: '0.85rem' }}>Total</span>
-                        <span style={{ fontWeight: '800', fontSize: '0.85rem', color: theme.accent }}>{Math.round(selectedVolumePoint.value)} lbs</span>
+                      );
+                    }
+                    return (
+                      <div style={{ ...cardStyle, padding: '18px 20px', marginBottom: '20px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                          <span style={{ fontWeight: '800', fontSize: '0.9rem' }}>{selectedVolumePoint.date}</span>
+                          <button onClick={() => setSelectedVolumePoint(null)} style={{ background: 'none', border: 'none', color: theme.gray, fontSize: '1.1rem', cursor: 'pointer', lineHeight: 1 }}>✕</button>
+                        </div>
+                        {selectedVolumePoint.breakdown.map((b, i) => (
+                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: i < selectedVolumePoint.breakdown.length - 1 ? `1px solid ${theme.border}` : 'none' }}>
+                            <span style={{ fontSize: '0.85rem', color: theme.grayLight }}>{b.name}</span>
+                            <span style={{ fontWeight: '700', fontSize: '0.85rem' }}>{Math.round(b.vol)} lbs</span>
+                          </div>
+                        ))}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', marginTop: '4px', borderTop: `1px solid ${theme.border}` }}>
+                          <span style={{ fontWeight: '800', fontSize: '0.85rem' }}>Total</span>
+                          <span style={{ fontWeight: '800', fontSize: '0.85rem', color: theme.accent }}>{Math.round(selectedVolumePoint.value)} lbs</span>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                   {(() => {
                     const n = new Date(); const cy = n.getFullYear(); const cm = n.getMonth();
                     const total = cy * 12 + cm + calendarOffset;
