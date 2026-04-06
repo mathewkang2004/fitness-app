@@ -368,8 +368,9 @@ function App() {
                             {availableExercises.map(e => <option key={e} value={e}>{e}</option>)}
                           </select>
                         )}
-                        <ResponsiveContainer width="100%" height="75%">
-                          <LineChart data={chartData} onClick={(d) => { if (chartMetric === 'Volume' && d && d.activePayload) { if (chartFilter === 'All') { setSelectedVolumePoint(d.activePayload[0].payload); } else { setSelectedVolumePoint({ isComparison: true }); } } }} style={{ cursor: chartMetric === 'Volume' ? 'pointer' : 'default' }}>
+                        <div onClick={() => { if (chartMetric === 'Volume' && chartFilter !== 'All') setSelectedVolumePoint({ isComparison: true }); }} style={{ width: '100%', height: '75%', cursor: chartFilter !== 'All' && chartMetric === 'Volume' ? 'pointer' : 'default' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartData} onClick={(d) => { if (chartMetric === 'Volume' && chartFilter === 'All' && d && d.activePayload) setSelectedVolumePoint(d.activePayload[0].payload); }} style={{ cursor: 'inherit' }}>
                             <defs>
                               <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
                                 <stop offset="0%" stopColor="#0a84ff" />
@@ -382,6 +383,7 @@ function App() {
                             <Line type="monotone" dataKey="value" stroke="url(#lineGrad)" strokeWidth={3} dot={chartMetric === 'Volume' ? { r: 3, fill: theme.accent, strokeWidth: 0 } : false} activeDot={{ r: 5 }} />
                           </LineChart>
                         </ResponsiveContainer>
+                        </div>
                       </div>
                     );
                   })()}
