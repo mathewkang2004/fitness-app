@@ -387,7 +387,7 @@ function App() {
                       }
                     }).filter(Boolean);
                     return (
-                      <div style={{ ...cardStyle, padding: '20px', height: chartMetric === '1RM' ? '360px' : '320px', marginBottom: '20px' }}>
+                      <div style={{ ...cardStyle, padding: '20px', height: chartMetric === '1RM' ? '380px' : '340px', marginBottom: '20px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', gap: '8px' }}>
                           <select value={chartMetric} onChange={(e) => { setChartMetric(e.target.value); setSelectedVolumePoint(null); }} style={{ backgroundColor: theme.input, color: '#fff', border: `1px solid ${theme.border}`, borderRadius: '10px', padding: '8px 12px', fontSize: '0.78rem', fontWeight: '700', flex: 1 }}>
                             <option value="Volume">Volume Trend</option>
@@ -405,15 +405,15 @@ function App() {
                         )}
                         <div onClick={(e) => { if (chartMetric !== 'Volume' || chartFilter === 'All') return; const rect = e.currentTarget.getBoundingClientRect(); const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)); const idx = Math.round(ratio * (chartData.length - 1)); setSelectedVolumePoint({ isComparison: true, clickedDate: chartData[idx]?.date }); }} style={{ width: '100%', height: '75%', cursor: chartFilter !== 'All' && chartMetric === 'Volume' ? 'pointer' : 'default' }}>
                         <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={chartData} onClick={(d) => { if (chartMetric === 'Volume' && chartFilter === 'All' && d && d.activePayload) setSelectedVolumePoint(d.activePayload[0].payload); }} style={{ cursor: 'inherit' }}>
+                          <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: 0 }} onClick={(d) => { if (chartMetric === 'Volume' && chartFilter === 'All' && d && d.activePayload) setSelectedVolumePoint(d.activePayload[0].payload); }} style={{ cursor: 'inherit' }}>
                             <defs>
                               <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
                                 <stop offset="0%" stopColor="#0a84ff" />
                                 <stop offset="100%" stopColor="#5856d6" />
                               </linearGradient>
                             </defs>
-                            <XAxis dataKey="date" hide />
-                            <YAxis hide />
+                            <XAxis dataKey="date" tickFormatter={(v) => { const p = v.split('/'); return `${p[0]}/${p[1]}`; }} interval="preserveStartEnd" tick={{ fontSize: '0.62rem', fill: theme.gray }} tickLine={false} axisLine={false} />
+                            <YAxis tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v} tick={{ fontSize: '0.62rem', fill: theme.gray }} tickLine={false} axisLine={false} width={36} />
                             <Tooltip contentStyle={{ backgroundColor: theme.card, border: `1px solid ${theme.border}`, borderRadius: '10px', fontSize: '0.8rem' }} formatter={(v) => [`${Math.round(v)} ${chartMetric === '1RM' ? 'lbs' : ''}`, chartMetric === '1RM' ? 'Est. 1RM' : 'Volume']} />
                             <Line type="monotone" dataKey="value" stroke="url(#lineGrad)" strokeWidth={3} dot={chartMetric === 'Volume' ? { r: 3, fill: theme.accent, strokeWidth: 0 } : false} activeDot={{ r: 5 }} />
                           </LineChart>
